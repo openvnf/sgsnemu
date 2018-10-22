@@ -29,16 +29,6 @@ spec:
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
-      - name: network-init
-        image: {{ .Values.Nettools.image.repository }}:{{ .Values.Nettools.image.tag }}
-        securityContext:
-          capabilities:
-            add: ["NET_ADMIN"]
-        command:
-        - sh
-        - -c
-        - |
-          echo "Setting up routes... "
       containers:
       - name: sgsnemu
         image: {{ .Values.sgsnemu.image.repository }}:{{ .Values.sgsnemu.image.tag }}
@@ -62,7 +52,6 @@ spec:
           {{- else }}
           echo "Running in manual mode.."
           {{- end }}
-          while true; do sleep 60; done;
         volumeMounts:
         - name: sgsnemu-config
           mountPath: /mnt/

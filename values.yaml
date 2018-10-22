@@ -4,7 +4,7 @@
 k8sNetwork: 10.10.10.0/24
 
 NIC:
-  interface: grx0
+  interface: eth0
 
 sgsnemu:
   automode: false
@@ -14,9 +14,8 @@ sgsnemu:
     repository: ergw/sgsnemu
     tag: master_b1900328f524dd0014ba54c86754ff269aa47cf3
   pullPolicy: IfNotPresent
-  listenIP: 198.18.0.2/28                     # IP of grx NIC
-  remoteIP: 198.18.1.2                        # IP of Cnode grx
-  imsi: 240010123456789
+  listenIP: 192.168.0.2/28                     # IP of grx NIC
+  remoteIP: 192.168.0.1                        # IP of Cnode grx
 
 Nettools:
   image:
