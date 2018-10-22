@@ -1,0 +1,90 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "sgsnemu.fullname" . }}
+  labels:
+    app: {{ template "sgsnemu.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: sgsnemu
+      app: {{ template "sgsnemu.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "sgsnemu.name" . }}
+        release: {{ .Release.Name }}
+        component: sgsnemu
+        {{ .Values.sgsnemu.selector }}: "true"
+      annotations:
+        {{ .Values.sgsnemu.selector }}/networks: {{ .Values.NIC.interface }}
+    spec:
+      initContainers:
+      - name: vxlan-controller-agent-init
+        image: {{ .Values.VXLan.image.repository }}:{{ .Values.VXLan.image.tag }}
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+      - name: network-init
+        image: {{ .Values.Nettools.image.repository }}:{{ .Values.Nettools.image.tag }}
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        command:
+        - sh
+        - -c
+        - |
+          echo "Setting up routes... "
+      containers:
+      - name: sgsnemu
+        image: {{ .Values.sgsnemu.image.repository }}:{{ .Values.sgsnemu.image.tag }}
+        securityContext:
+          privileged: true
+          capabilities:
+            add: ["NET_ADMIN"]
+        command:
+        - sh
+        - -c
+        - |
+          echo "Setting up routes... "
+          ip a add {{ .Values.sgsnemu.listenIP }} dev {{ .Values.NIC.interface }}
+          ip r add {{ .Values.k8sNetwork }} via 169.254.1.1
+          ip link set dev eth0 mtu 1440
+          ip a
+
+          echo "Running sgsnemu. Type 'sgsnemu --help' for info."
+          {{- if .Values.sgsnemu.automode }}
+          sgsnemu --remote={{ .Values.sgsnemu.remoteIP }} --listen={{$v := .Values.sgsnemu.listenIP | split "/"}}{{$v._0}} --conf=/mnt/sgsn-test.conf --createif -t v4 --defaultroute
+          {{- else }}
+          echo "Running in manual mode.."
+          {{- end }}
+          while true; do sleep 60; done;
+        volumeMounts:
+        - name: sgsnemu-config
+          mountPath: /mnt/
+      - name: iperf-probe
+        image: {{ .Values.Nettools.image.repository }}:{{ .Values.Nettools.image.tag }}
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        command:
+        - sh
+        - -c
+        - |
+          while true; do sleep 30; done;
+      - name: vxlan-controller-agent
+        image: {{ .Values.VXLan.image.repository }}:{{ .Values.VXLan.image.tag }}
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        resources:
+          requests:
+            cpu: "{{ .Values.VXLan.resources.cpu }}"
+      volumes:
+      - name: sgsnemu-config
+        configMap:
+          name: {{ template "sgsnemu.fullname" . }}-configmap

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "sgsnemu.fullname" . }}-configmap
+  namespace: default
+  labels:
+    app: {{ template "sgsnemu.name" . }}
+    chart: {{ template "sgsnemu.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  sgsn-test.conf: |
+    imsi 240010123456789
+    qos 0x0b921f
+    qose1 0x9396404074f9ffff
+    qose2 0x11
+    qose3 0x0101
+    qose4 0x4040
+    charging 0x800
+    apn tpip.net
+    msisdn 46702123456
+    uid mig
+    pwd hemmelig
+    rai 025.099.46241.207
+    mstz 0
+    nsapi 5
