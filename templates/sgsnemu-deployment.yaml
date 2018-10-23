@@ -52,6 +52,7 @@ spec:
           {{- else }}
           echo "Running in manual mode.."
           {{- end }}
+          while true; do sleep 30; done;
         volumeMounts:
         - name: sgsnemu-config
           mountPath: /mnt/
