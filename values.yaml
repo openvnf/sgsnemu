@@ -1,21 +1,27 @@
 # Default values for sgsnemu and iperf.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-k8sNetwork: 10.10.10.0/24
+k8s:
+  network: 10.10.10.0/24
+  via: 169.254.1.1
 
 NIC:
-  interface: eth0
+  interface: grx0
+
+labels:
+  namespace: default
 
 sgsnemu:
-  automode: false
+  automode: False
   selector: vxlan.travelping.com
   replicas: 1
   image:
     repository: ergw/sgsnemu
     tag: master_b1900328f524dd0014ba54c86754ff269aa47cf3
   pullPolicy: IfNotPresent
-  listenIP: 192.168.0.2/28                     # IP of grx NIC
-  remoteIP: 192.168.0.1                        # IP of Cnode grx
+  listenIP: 198.18.0.2/28                     # IP of grx NIC
+  remoteIP: 198.18.1.2                        # IP of Cnode grx
+  imsi: 240010123456789
 
 Nettools:
   image:

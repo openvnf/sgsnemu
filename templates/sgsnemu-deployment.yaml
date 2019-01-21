@@ -2,6 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: {{ template "sgsnemu.fullname" . }}
+  namespace: {{ .Values.labels.namespace }}
   labels:
     app: {{ template "sgsnemu.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
@@ -26,12 +27,45 @@ spec:
       initContainers:
       - name: vxlan-controller-agent-init
         image: {{ .Values.VXLan.image.repository }}:{{ .Values.VXLan.image.tag }}
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "10Mi"
+          limits:
+            cpu: "10m"
+            memory: "10Mi"
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
+      - name: network-init
+        image: {{ .Values.Nettools.image.repository }}:{{ .Values.Nettools.image.tag }}
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "10Mi"
+          limits:
+            cpu: "10m"
+            memory: "10Mi"
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        command:
+        - bash
+        - -c
+        - |
+          set -x
+          # set GRO settings off
+          ethtool -K {{ .Values.NIC.interface }} gro off
       containers:
       - name: sgsnemu
         image: {{ .Values.sgsnemu.image.repository }}:{{ .Values.sgsnemu.image.tag }}
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "10Mi"
+          limits:
+            cpu: "100m"
+            memory: "10Mi"
         securityContext:
           privileged: true
           capabilities:
@@ -42,7 +76,7 @@ spec:
         - |
           echo "Setting up routes... "
           ip a add {{ .Values.sgsnemu.listenIP }} dev {{ .Values.NIC.interface }}
-          ip r add {{ .Values.k8sNetwork }} via 169.254.1.1
+          ip r add {{ .Values.k8s.network }} via {{ .Values.k8s.via }}
           ip link set dev eth0 mtu 1440
           ip a
 
@@ -52,12 +86,19 @@ spec:
           {{- else }}
           echo "Running in manual mode.."
           {{- end }}
-          while true; do sleep 30; done;
+          while true; do sleep 60; done;
         volumeMounts:
         - name: sgsnemu-config
           mountPath: /mnt/
       - name: iperf-probe
         image: {{ .Values.Nettools.image.repository }}:{{ .Values.Nettools.image.tag }}
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "10Mi"
+          limits:
+            cpu: "100m"
+            memory: "10Mi"
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
@@ -66,14 +107,19 @@ spec:
         - -c
         - |
           while true; do sleep 30; done;
+          apk -U add iperf3
       - name: vxlan-controller-agent
         image: {{ .Values.VXLan.image.repository }}:{{ .Values.VXLan.image.tag }}
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "10Mi"
+          limits:
+            cpu: "10m"
+            memory: "10Mi"
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
-        resources:
-          requests:
-            cpu: "{{ .Values.VXLan.resources.cpu }}"
       volumes:
       - name: sgsnemu-config
         configMap:
