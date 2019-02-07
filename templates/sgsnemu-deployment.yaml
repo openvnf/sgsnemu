@@ -2,7 +2,6 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: {{ template "sgsnemu.fullname" . }}
-  namespace: {{ .Values.labels.namespace }}
   labels:
     app: {{ template "sgsnemu.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}

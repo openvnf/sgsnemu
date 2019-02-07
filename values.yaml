@@ -6,10 +6,7 @@ k8s:
   via: 169.254.1.1
 
 NIC:
-  interface: grx0
-
-labels:
-  namespace: default
+  interface: eth0
 
 sgsnemu:
   automode: False
