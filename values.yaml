@@ -6,32 +6,94 @@ k8s:
   via: 169.254.1.1
 
 NIC:
-  interface: eth0
+  interface: s8
 
 sgsnemu:
-  automode: False
+  automode: True
   selector: vxlan.travelping.com
   replicas: 1
   image:
     repository: ergw/sgsnemu
     tag: master_b1900328f524dd0014ba54c86754ff269aa47cf3
   pullPolicy: IfNotPresent
-  listenIP: 198.18.0.2/28                     # IP of grx NIC
-  remoteIP: 198.18.1.2                        # IP of Cnode grx
-  imsi: 240010123456789
+  listenIP: 192.168.172.2/32                     # IP of grx NIC
+  remoteIP: 192.168.172.1                       # IP of Cnode grx
+  mtu: 1440
+  config:
+    imsi: ""
+    qos: ""
+    qose1: ""
+    qose2: ""
+    qose3: ""
+    qose4: ""
+    charging: ""
+    apn: "host.com"
+    msisdn: ""
+    uid: ""
+    pwd: ""
+    rai: ""
+    mstz: ""
+    nsapi: ""
 
 Nettools:
   image:
     repository: travelping/nettools
-    tag: 1.7.0
+    tag: 1.9.0
     pullPolicy: IfNotPresent
-  resources:
-    cpu: 10m
+
+Iperf:
+  automode: False
+  options: "-u -P 5 -b 1000000m"
+  image:
+    repository: travelping/nettools
+    tag: 1.9.0
+    pullPolicy: IfNotPresent
 
 VXLan:
+  enabled: true
   image:
     repository: openvnf/kube-vxlan-controller-agent
     tag: 2.1.0
     pullPolicy: IfNotPresent
-  resources:
-    cpu: 10m
+
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  vxlanControllerAgentInit:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  vxlanControllerAgent:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  networkInit:
+    limits:
+      cpu: 50m
+      memory: 64Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  sgsnemu:
+    requests:
+      cpu: 10m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+  pingExporter:
+    limits:
+      cpu: 50m
+      memory: 32Mi
+    requests:
+      cpu: 25m
+      memory: 16Mi

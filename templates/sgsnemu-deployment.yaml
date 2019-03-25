@@ -24,27 +24,19 @@ spec:
         {{ .Values.sgsnemu.selector }}/networks: {{ .Values.NIC.interface }}
     spec:
       initContainers:
+      {{- if .Values.VXLan.enabled }}
       - name: vxlan-controller-agent-init
         image: {{ .Values.VXLan.image.repository }}:{{ .Values.VXLan.image.tag }}
         resources:
-          requests:
-            cpu: "10m"
-            memory: "10Mi"
-          limits:
-            cpu: "10m"
-            memory: "10Mi"
+{{ toYaml .Values.resources.vxlanControllerAgentInit | indent 10 }}
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
+      {{- end }}
       - name: network-init
         image: {{ .Values.Nettools.image.repository }}:{{ .Values.Nettools.image.tag }}
         resources:
-          requests:
-            cpu: "10m"
-            memory: "10Mi"
-          limits:
-            cpu: "10m"
-            memory: "10Mi"
+{{ toYaml .Values.resources.networkInit | indent 10 }}
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
@@ -52,6 +44,12 @@ spec:
         - bash
         - -c
         - |
+          echo "Setting up routes... "
+          ip addr add {{ .Values.sgsnemu.listenIP }} dev {{ .Values.NIC.interface }}
+          ip route add {{ .Values.k8s.network }} via {{ .Values.k8s.via }}
+          ip link set dev {{ .Values.NIC.interface }} mtu {{ .Values.sgsnemu.mtu }}
+          ip addr show
+
           set -x
           # set GRO settings off
           ethtool -K {{ .Values.NIC.interface }} gro off
@@ -59,12 +57,7 @@ spec:
       - name: sgsnemu
         image: {{ .Values.sgsnemu.image.repository }}:{{ .Values.sgsnemu.image.tag }}
         resources:
-          requests:
-            cpu: "10m"
-            memory: "10Mi"
-          limits:
-            cpu: "100m"
-            memory: "10Mi"
+{{ toYaml .Values.resources.sgsnemu | indent 10 }}
         securityContext:
           privileged: true
           capabilities:
@@ -73,31 +66,20 @@ spec:
         - sh
         - -c
         - |
-          echo "Setting up routes... "
-          ip a add {{ .Values.sgsnemu.listenIP }} dev {{ .Values.NIC.interface }}
-          ip r add {{ .Values.k8s.network }} via {{ .Values.k8s.via }}
-          ip link set dev eth0 mtu 1440
-          ip a
-
           echo "Running sgsnemu. Type 'sgsnemu --help' for info."
           {{- if .Values.sgsnemu.automode }}
           sgsnemu --remote={{ .Values.sgsnemu.remoteIP }} --listen={{$v := .Values.sgsnemu.listenIP | split "/"}}{{$v._0}} --conf=/mnt/sgsn-test.conf --createif -t v4 --defaultroute
           {{- else }}
-          echo "Running in manual mode.."
+          echo "Running in manual mode."
           {{- end }}
-          while true; do sleep 60; done;
+
         volumeMounts:
         - name: sgsnemu-config
           mountPath: /mnt/
-      - name: iperf-probe
-        image: {{ .Values.Nettools.image.repository }}:{{ .Values.Nettools.image.tag }}
+      - name: iperf
+        image: {{ .Values.Iperf.image.repository }}:{{ .Values.Iperf.image.tag }}
         resources:
-          requests:
-            cpu: "10m"
-            memory: "10Mi"
-          limits:
-            cpu: "100m"
-            memory: "10Mi"
+{{ toYaml .Values.resources.iperfSidekick | indent 10 }}
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
@@ -105,20 +87,21 @@ spec:
         - sh
         - -c
         - |
-          while true; do sleep 30; done;
-          apk -U add iperf3
+          {{- if .Values.Iperf.automode }}
+          echo "Iperf3-automode running! Pushing traffic to {{ .Values.sgsnemu.remoteIP }}."
+          iperf3 -c {{ .Values.sgsnemu.remoteIP }} {{ .Values.Iperf.options }}
+          {{- else }}
+          echo "Running in manual mode. Type 'iperf3 --help' for info."
+          {{- end }}
+      {{- if .Values.VXLan.enabled }}
       - name: vxlan-controller-agent
         image: {{ .Values.VXLan.image.repository }}:{{ .Values.VXLan.image.tag }}
         resources:
-          requests:
-            cpu: "10m"
-            memory: "10Mi"
-          limits:
-            cpu: "10m"
-            memory: "10Mi"
+{{ toYaml .Values.resources.vxlanControllerAgent | indent 10 }}
         securityContext:
           capabilities:
             add: ["NET_ADMIN"]
+      {{- end }}
       volumes:
       - name: sgsnemu-config
         configMap:
